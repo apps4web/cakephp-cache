@@ -8,6 +8,7 @@ use Cake\Core\Configure;
 use Cake\Core\InstanceConfigTrait;
 use Cake\Http\Response;
 use Cake\Http\ServerRequest;
+use Cake\ORM\TableRegistry;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -119,13 +120,23 @@ class CacheMiddleware implements MiddlewareInterface {
 	protected function getContent(string $url, string $cacheKey) {
 		$engine = $this->getConfig('engine');
 		if (!$engine) {
-			$folder = CACHE . 'views' . DS;
-			$file = $folder . $cacheKey . '.cache';
-			if (!file_exists($file)) {
-				return null;
-			}
+            $cachedView = TableRegistry::getTableLocator()->get('CachedViews')->find()
+                ->where(['cache_key' => $cacheKey])
+                ->first();
+            
+            if (!empty($cachedView)) {
+                return $cachedView->content;
+            }
 
-			return file_get_contents($file) ?: null;
+            return null;
+
+            // $folder = CACHE . 'views' . DS;
+			// $file = $folder . $cacheKey . '.cache';
+			// if (!file_exists($file)) {
+			// 	return null;
+			// }
+
+			// return file_get_contents($file) ?: null;
 		}
 
 		return Cache::read($cacheKey, $engine) ?: null;
@@ -139,11 +150,21 @@ class CacheMiddleware implements MiddlewareInterface {
 	protected function removeContent(string $cacheKey): void {
 		$engine = $this->getConfig('engine');
 		if (!$engine) {
-			$folder = CACHE . 'views' . DS;
-			$file = $folder . $cacheKey . '.cache';
-			unlink($file);
+            $cachedView = TableRegistry::getTableLocator()->get('CachedViews')->find()
+                ->where(['cache_key' => $cacheKey])
+                ->first();
+            
+            if (!empty($cachedView)) {
+                TableRegistry::getTableLocator()->get('CachedViews')->delete($cachedView);
+            }
 
-			return;
+            return;
+
+			// $folder = CACHE . 'views' . DS;
+			// $file = $folder . $cacheKey . '.cache';
+			// unlink($file);
+
+			// return;
 		}
 
 		Cache::delete($cacheKey, $engine);
