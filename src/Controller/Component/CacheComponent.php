@@ -9,6 +9,7 @@ use Cake\Controller\Component;
 use Cake\Controller\ComponentRegistry;
 use Cake\Core\Configure;
 use Cake\Event\EventInterface;
+use Cake\ORM\TableRegistry;
 
 /**
  * For complete URL caching. Allows to set a very specific duration per URL.
@@ -120,10 +121,30 @@ class CacheComponent extends Component {
 
 		$engine = $this->getConfig('engine');
 		if (!$engine) {
-			return $this->_writeFile($content, $cacheKey);
+            return $this->_writeDbase($content, $cacheKey);
+			// return $this->_writeFile($content, $cacheKey);
 		}
 
 		return Cache::write($cacheKey, $content, $engine);
+	}
+
+	/**
+	 * @param string $content
+	 * @param string $cache
+	 *
+	 * @return bool
+	 */
+	protected function _writeDbase(string $content, string $cache) {
+		$view = TableRegistry::getTableLocator()->get('CachedViews')->newEntity([
+            'cache_key' => $cache,
+            'content' => $content
+        ]);
+
+        if (TableRegistry::getTableLocator()->get('CachedViews')->save($view)) {
+            return true;
+        }
+
+        return false;
 	}
 
 	/**
